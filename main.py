@@ -32,23 +32,29 @@ def detect_face(image):
     return gray[y:y+w, x:x+h], faces[0]
 
 
-def prepare_data_for_training():
+def prepare_data_for_training(limit):
     """Returns a tuple containing (faces_train, labels_train, faces_test, labels_test)
     only performs face detection from images if a previous result is not already saved to disk"""
     if FACES_TEST not in os.listdir(ROOT):
         faces = []
         labels = []
         count = 0
+        limit_count = 0
         for name in os.listdir(NAMES_DIR):
             count += 1
             for image in os.listdir(Path.joinpath(NAMES_DIR, name)):
+                limit_count += 1
+                if limit_count >= limit:
+                    break
                 filename = Path.joinpath(NAMES_DIR, name, image)
                 im = cv2.imread(str(filename))
                 face, rect = detect_face(im)
                 if face is not None:
                     faces += [face]
                     labels += [count]
-                    print(f"Elaborato {image} per tizio {name}")
+                    print(f"{limit_count}. Elaborato {image} per tizio {name}")
+            if limit_count >= limit:
+                break
 
         faces_train = []
         faces_test = []
@@ -84,23 +90,53 @@ def show_image(image):
 
 
 def train_face_recognizer(faces, labels):
-    face_recognizer = cv2.face.LBPHFaceRecognizer_create()
+    # face_recognizer = cv2.face.LBPHFaceRecognizer_create()
+    face_recognizer = cv2.face.EigenFaceRecognizer_create()
+    # face_recognizer = cv2.face.FisherFaceRecognizer_create()
+    labels = np.array(labels)
     face_recognizer.train(faces, labels)
     return face_recognizer
 
 
 def predict(face_recognizer, test_image):
-    label = face_recognizer.predict(test_image)
-    return label
+    label, confidence = face_recognizer.predict(test_image)
+    return label, confidence
+
+
+def lazy_reshape(faces):
+    new_faces = []
+    for f in faces:
+        x = f.copy()
+        x.resize((168, 168), refcheck=False)
+        new_faces += [x]
+    return new_faces
+
+
+def reshape(faces):
+    new_faces = []
+    for f in faces:
+        x = f.copy()
+        x = cv2.resize(x, (100, 100))
+        new_faces += [x]
+    return new_faces
 
 
 if __name__ == '__main__':
-    faces_train, labels_train, faces_test, labels_test = prepare_data_for_training()
+    faces_train, labels_train, faces_test, labels_test = prepare_data_for_training(5000)
 
+    faces_train = reshape(faces_train)
+    faces_test = reshape(faces_test)
+    print("Reshape finished")
+
+    # fai train di tutti e 3 i modelli e salva su disk
     face_recognizer = train_face_recognizer(faces_train, labels_train)
+    print("Training finished")
 
-
-    show_image(faces_test[0])
-    label, _ = predict(face_recognizer, faces_test[0])
-    print(os.listdir(NAMES_DIR)[label - 1])
-
+    correct = 0
+    total = len(faces_test)
+    for index, face in enumerate(faces_test):
+        guess, confidence = predict(face_recognizer, face)
+        if guess == labels_test[index]:
+            correct += 1
+            print(f"Correct guess for {get_names()[guess - 1]}")
+    print(f"accuracy: {correct / total}, correct guesses: {correct}, total: {total}")
