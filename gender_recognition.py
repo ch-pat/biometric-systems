@@ -68,6 +68,9 @@ def checking(img):
     cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     faces = cascade.detectMultiScale(gray, 1.1, 7)
 
+    if len(faces) == 0:
+        return None
+
     x, y, w, h = faces[0]
 
     face = image[y:y + h, x:x + w]
@@ -76,9 +79,30 @@ def checking(img):
     reshape = np.reshape(img_scaled, (1, 150, 150, 3))
     img = np.vstack([reshape])
     result = np.argmax(model.predict(img), axis=-1)
+    # print(result)
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # plt.imshow(image)
+    # plt.show()
+
     return result
 
 
-for img in os.listdir(r"C:\Users\Patryk\Desktop\Lavoro\biometric-systems\celeb_faces\test\Obama"):
-    print(checking(r"C:\Users\Patryk\Desktop\Lavoro\biometric-systems\celeb_faces\test\Obama" + f"\\{img}"))
+def test_accuracy():
+    label = {0: "female", 1: "male"}
+    reverse_label = {"female": 0, "male": 1}
+    total = 0
+    correct = 0
+    for directory in os.listdir("gender/validation"):
+        for image in os.listdir("gender/validation/" + directory):
+            result = checking("gender/validation/" + directory + "/" + image)
+            if result is not None:
+                total += 1
+                if result == reverse_label[directory]:
+                    correct += 1
+                print(f"Cheking in directory {directory}, predicted {reverse_label[directory]}, correct: {correct}, total: {total}, accuracy: {correct / total}")
 
+
+    print(f"Accuracy: {correct / total}")
+
+
+test_accuracy()
