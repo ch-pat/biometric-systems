@@ -1,5 +1,5 @@
 import cv2
-from face_recognition import train_models, test_accuracy, prepare_data_for_training
+from face_recognition import train_models, test_accuracy, prepare_data_for_training, prepare_data_for_training_celeb
 
 
 def show_image(image):
@@ -17,7 +17,7 @@ def reshape(faces):
 
 
 if __name__ == '__main__':
-    faces_train, labels_train, faces_test, labels_test = prepare_data_for_training(20000)
+    faces_train, labels_train, faces_test, labels_test = prepare_data_for_training_celeb()
 
     faces_train = reshape(faces_train)
     faces_test = reshape(faces_test)
@@ -30,4 +30,4 @@ if __name__ == '__main__':
     print("Training finished")
 
     #TODO: aggiungi qui cose per fare confronti tra i vari modelli
-    test_accuracy(LBPH_recognizer, faces_test, labels_test)
+    test_accuracy(LBPH_recognizer, faces_test, labels_test, "celeb")

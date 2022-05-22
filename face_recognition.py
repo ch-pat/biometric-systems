@@ -5,8 +5,6 @@ import numpy as np
 from random import sample
 
 ROOT = Path(__file__).parent
-NAMES_DIR = Path.joinpath(ROOT, "faces/lfw-deepfunneled/")
-EXTRACTED_FACES_DIR = "extracted_faces_data/"
 FACES_TEST = "faces_test.npy"
 FACES_TRAIN = "faces_train.npy"
 LABELS_TEST = "labels_test.npy"
@@ -27,19 +25,22 @@ def detect_face(image):
 def prepare_data_for_training(limit):
     """Returns a tuple containing (faces_train, labels_train, faces_test, labels_test)
     only performs face detection from images if a previous result is not already saved to disk"""
-    if FACES_TEST not in os.listdir(Path.joinpath(ROOT, EXTRACTED_FACES_DIR)):
+    names_dir = Path.joinpath(ROOT, "faces/lfw-deepfunneled/")
+    extracted_faces_dir = "extracted_faces_data/"
+
+    if FACES_TEST not in os.listdir(Path.joinpath(ROOT, extracted_faces_dir)):
         faces = []
         labels = []
         count = 0
         limit_count = 0
-        for name in os.listdir(NAMES_DIR):
+        for name in os.listdir(names_dir):
             count += 1
-            for image in os.listdir(Path.joinpath(NAMES_DIR, name)):
-                if len(os.listdir(Path.joinpath(NAMES_DIR, name))) > 2:
+            for image in os.listdir(Path.joinpath(names_dir, name)):
+                if len(os.listdir(Path.joinpath(names_dir, name))) > 2:
                     limit_count += 1
                     if limit_count >= limit:
                         break
-                    filename = Path.joinpath(NAMES_DIR, name, image)
+                    filename = Path.joinpath(names_dir, name, image)
                     im = cv2.imread(str(filename))
                     face, rect = detect_face(im)
                     if face is not None:
@@ -64,17 +65,45 @@ def prepare_data_for_training(limit):
                 faces_train += [faces[i]]
                 labels_train += [labels[i]]
 
-        np.save(EXTRACTED_FACES_DIR + FACES_TEST, faces_test)
-        np.save(EXTRACTED_FACES_DIR + FACES_TRAIN, faces_train)
-        np.save(EXTRACTED_FACES_DIR + LABELS_TEST, labels_test)
-        np.save(EXTRACTED_FACES_DIR + LABELS_TRAIN, labels_train)
+        np.save(extracted_faces_dir + FACES_TEST, faces_test)
+        np.save(extracted_faces_dir + FACES_TRAIN, faces_train)
+        np.save(extracted_faces_dir + LABELS_TEST, labels_test)
+        np.save(extracted_faces_dir + LABELS_TRAIN, labels_train)
     else:
-        faces_test = np.load(EXTRACTED_FACES_DIR + FACES_TEST, allow_pickle=True)
-        faces_train = np.load(EXTRACTED_FACES_DIR + FACES_TRAIN, allow_pickle=True)
-        labels_test = np.load(EXTRACTED_FACES_DIR + LABELS_TEST, allow_pickle=True)
-        labels_train = np.load(EXTRACTED_FACES_DIR + LABELS_TRAIN, allow_pickle=True)
+        faces_test = np.load(extracted_faces_dir + FACES_TEST, allow_pickle=True)
+        faces_train = np.load(extracted_faces_dir + FACES_TRAIN, allow_pickle=True)
+        labels_test = np.load(extracted_faces_dir + LABELS_TEST, allow_pickle=True)
+        labels_train = np.load(extracted_faces_dir + LABELS_TRAIN, allow_pickle=True)
         print("Loaded train and test data from disk.")
 
+    return faces_train, labels_train, faces_test, labels_test
+
+
+def extract_faces_and_labels(dataset_dir):
+    """Returns two lists: (faces, labels) starting from images in the dataset directory"""
+    faces = []
+    labels = []
+
+    count = 0
+    for name in os.listdir(dataset_dir):
+        count += 1
+        for image in os.listdir(Path.joinpath(dataset_dir, name)):
+            filename = Path.joinpath(dataset_dir, name, image)
+            im = cv2.imread(str(filename))
+            face, rect = detect_face(im)
+            if face is not None:
+                faces += [face]
+                labels += [count]
+                print(f"{count}. Elaborato {image} per tizio {name}")
+    return faces, labels
+
+
+def prepare_data_for_training_celeb():
+    train_dir = Path("celeb_faces/train")
+    test_dir = Path("celeb_faces/test")
+
+    faces_train, labels_train = extract_faces_and_labels(train_dir)
+    faces_test, labels_test = extract_faces_and_labels(test_dir)
     return faces_train, labels_train, faces_test, labels_test
 
 
@@ -84,7 +113,7 @@ def train_models(faces, labels, force_lbph=False, force_eigen=False, force_fishe
     if "models" not in os.listdir():
         os.mkdir("models")
 
-    lbph_face_recognizer = cv2.face.LBPHFaceRecognizer_create(radius=2)
+    lbph_face_recognizer = cv2.face.LBPHFaceRecognizer_create(radius=3)
     if do_lbph:
         if "LBPH.yml" not in os.listdir("models") or force_lbph:
             lbph_face_recognizer.train(faces, labels)
@@ -122,16 +151,20 @@ def predict(face_recognizer, test_image):
     return label, confidence
 
 
-def get_names():
-    names_dir = Path.joinpath(ROOT, "faces/lfw-deepfunneled/")
+def get_names(dir):
+    if dir == "normal":
+        names_dir = Path.joinpath(ROOT, "faces/lfw-deepfunneled/")
+    if dir == "celeb":
+        names_dir = Path.joinpath(ROOT, "celeb_faces/test/")
+
     names = [x.name for x in names_dir.iterdir()]
     return names
 
 
-def test_accuracy(face_recognizer, faces_test, labels_test):
+def test_accuracy(face_recognizer, faces_test, labels_test, dir):
     correct = 0
     total = len(faces_test)
-    names = get_names()
+    names = get_names(dir)
     for index, face in enumerate(faces_test):
         guess, distance = predict(face_recognizer, face)
         if guess == labels_test[index]:
