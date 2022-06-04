@@ -1,5 +1,5 @@
 import cv2
-from face_recognition import train_models, test_accuracy, prepare_data_for_training, prepare_data_for_training_celeb
+from face_recognition import train_models, test_accuracy, prepare_data_for_training, prepare_data_for_training_celeb, test_accuracy_thresholds
 
 
 def show_image(image):
@@ -26,8 +26,8 @@ if __name__ == '__main__':
 
     # fai train di tutti e 3 i modelli e salva su disk
 
-    LBPH_recognizer, Eigen_recognizer, Fisher_recognizer = train_models(faces_train, labels_train, force_lbph=True)
+    LBPH_recognizer, Eigen_recognizer, Fisher_recognizer = train_models(faces_train, labels_train)
     print("Training finished")
 
     #TODO: aggiungi qui cose per fare confronti tra i vari modelli
-    test_accuracy(LBPH_recognizer, faces_test, labels_test, "celeb")
+    test_accuracy_thresholds(LBPH_recognizer, faces_test, labels_test, "celeb")

@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 import numpy as np
 from random import sample
+import matplotlib.pyplot as plt
+
 
 ROOT = Path(__file__).parent
 FACES_TEST = "faces_test.npy"
@@ -151,20 +153,20 @@ def predict(face_recognizer, test_image):
     return label, confidence
 
 
-def get_names(dir):
-    if dir == "normal":
+def get_names(directory):
+    if directory == "normal":
         names_dir = Path.joinpath(ROOT, "faces/lfw-deepfunneled/")
-    if dir == "celeb":
+    if directory == "celeb":
         names_dir = Path.joinpath(ROOT, "celeb_faces/test/")
 
     names = [x.name for x in names_dir.iterdir()]
     return names
 
 
-def test_accuracy(face_recognizer, faces_test, labels_test, dir):
+def test_accuracy(face_recognizer, faces_test, labels_test, directory):
     correct = 0
     total = len(faces_test)
-    names = get_names(dir)
+    names = get_names(directory)
     for index, face in enumerate(faces_test):
         guess, distance = predict(face_recognizer, face)
         if guess == labels_test[index]:
@@ -176,3 +178,47 @@ def test_accuracy(face_recognizer, faces_test, labels_test, dir):
                 f"Wrong   guess for {names[labels_test[index] - 1]}. Accuracy: {correct / (index + 1)}, correct guesses: {correct}, total: {index + 1}. Guess was: {names[guess - 1]}. Distance: {distance}")
     print(f"Accuracy: {correct / total}, correct guesses: {correct}, total: {total}")
 
+
+def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory):
+    statements = []
+    thresholds = []
+    false_accept_values = []
+    false_reject_values = []
+    true_accept_values = []
+    true_reject_values = []
+    accuracies = []
+    for threshold in range(1, 201, 10):
+        true_accept = 0
+        false_accept = 0
+        true_reject = 0
+        false_reject = 0
+        total = len(faces_test)
+        names = get_names(directory)
+        correct = 0
+        for index, face in enumerate(faces_test):
+            guess, distance = predict(face_recognizer, face)
+            if names[labels_test[index] - 1] != "ZZZ":
+                # Here we can have true accept or false reject
+                if distance > threshold:
+                    false_reject += 1
+                else:
+                    true_accept += 1
+            else:
+                # Here we can have false accept or true reject
+                if distance > threshold:
+                    true_reject += 1
+                else:
+                    false_accept += 1
+        statements += [f"With threshold: {threshold}: TR: {true_reject}, TA: {true_accept}, FR: {false_reject}, FA: {false_accept}, accuracy: {(true_accept + true_reject) / total}"]
+        thresholds += [threshold]
+        true_reject_values += [true_reject]
+        true_accept_values += [true_accept]
+        false_reject_values += [false_reject]
+        false_accept_values += [false_accept]
+        accuracies += [(true_accept + true_reject) / total]
+    for statement in statements:
+        print(statement)
+
+    #TODO: fai tutti i plot più o meno allo stesso modo
+    plt.plot(thresholds, accuracies)
+    plt.show()

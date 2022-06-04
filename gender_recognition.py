@@ -69,7 +69,7 @@ def checking(img):
     faces = cascade.detectMultiScale(gray, 1.1, 7)
 
     if len(faces) == 0:
-        return None
+        return None, None
 
     x, y, w, h = faces[0]
 
@@ -78,16 +78,12 @@ def checking(img):
     img_scaled = face / 255.0
     reshape = np.reshape(img_scaled, (1, 150, 150, 3))
     img = np.vstack([reshape])
-    result = np.argmax(model.predict(img), axis=-1)
-    # print(result)
-    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    # plt.imshow(image)
-    # plt.show()
+    res = model.predict(img)
 
-    return result
+    return res, img
 
 
-def test_accuracy():
+def test_accuracy_gender():
     label = {0: "female", 1: "male"}
     reverse_label = {"female": 0, "male": 1}
     total = 0
@@ -99,10 +95,54 @@ def test_accuracy():
                 total += 1
                 if result == reverse_label[directory]:
                     correct += 1
-                print(f"Cheking in directory {directory}, predicted {reverse_label[directory]}, correct: {correct}, total: {total}, accuracy: {correct / total}")
-
+                print(f"Checking in directory {directory}, predicted {reverse_label[directory]}, correct: {correct}, total: {total}, accuracy: {correct / total}")
 
     print(f"Accuracy: {correct / total}")
 
 
-test_accuracy()
+def gender_plot_auroc():
+    true_positive_rates = []
+    false_positive_rates = []
+    reverse_label = {"female": 0, "male": 1}
+
+    thresholds = []
+    true_positive_values = []
+    false_negative_values = []
+    true_negative_values = []
+    false_positive_values = []
+    accuracies = []
+    for i in range(1, 11):
+        tn = 0
+        tp = 0
+        fp = 0
+        fn = 0
+        for directory in os.listdir("gender/Validation"):
+            for image in os.listdir("gender/Validation/" + directory):
+                res, img = checking("gender/Validation/" + directory + "/" + image)
+                if res and img:
+                    result = res[0][0]
+                    if result >= i / 10:
+                        if 0 == reverse_label[directory]:
+                            tp += 1
+                        else:
+                            fp += 1
+                    else:
+                        if 0 == reverse_label[directory]:
+                            fn += 1
+                        else:
+                            tn += 1
+            print(f"Accuracy at threshold {i / 10}: {(tp + tn) / (tp + tn + fp + fn)}")
+        tpr = tp/(tp + fn)
+        fpr = fp/(fp + tn)
+        true_positive_rates += [tpr]
+        false_positive_rates += [fpr]
+        thresholds += [i]
+        true_positive_values += [tp]
+        true_negative_values += [tn]
+        false_positive_values += [fp]
+        false_negative_values += [fn]
+        accuracies += [(tp + tn) / (tp + tn + fp + fn)]
+
+    print(f"TP {tp}, TN: {tn}, FP {fp}, FN: {fn}")
+    plt.plot(false_positive_rates, true_positive_rates)
+    plt.show()
