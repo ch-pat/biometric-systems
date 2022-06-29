@@ -27,7 +27,7 @@ def detect_face(image):
 def prepare_data_for_training(limit):
     """Returns a tuple containing (faces_train, labels_train, faces_test, labels_test)
     only performs face detection from images if a previous result is not already saved to disk"""
-    names_dir = Path.joinpath(ROOT, "faces/lfw-deepfunneled/")
+    names_dir = Path.joinpath(ROOT, "Datasets/lfw-deepfunneled/") # "faces/lfw-deepfunneled/")
     extracted_faces_dir = "extracted_faces_data/"
 
     if FACES_TEST not in os.listdir(Path.joinpath(ROOT, extracted_faces_dir)):
@@ -101,15 +101,15 @@ def extract_faces_and_labels(dataset_dir):
 
 
 def prepare_data_for_training_celeb():
-    train_dir = Path("celeb_faces/train")
-    test_dir = Path("celeb_faces/test")
+    train_dir = Path("Datasets/Celebrity/train")
+    test_dir = Path("Datasets/Celebrity/test")
 
     faces_train, labels_train = extract_faces_and_labels(train_dir)
     faces_test, labels_test = extract_faces_and_labels(test_dir)
     return faces_train, labels_train, faces_test, labels_test
 
 
-def train_models(faces, labels, force_lbph=False, force_eigen=False, force_fisher=False, do_lbph=True, do_eigen=False, do_fisher=False):
+def train_models(faces, labels, force_lbph=False, force_eigen=False, force_fisher=False, do_lbph=True, do_eigen=True, do_fisher=True):
     labels = np.array(labels)
 
     if "models" not in os.listdir():
@@ -155,9 +155,9 @@ def predict(face_recognizer, test_image):
 
 def get_names(directory):
     if directory == "normal":
-        names_dir = Path.joinpath(ROOT, "faces/lfw-deepfunneled/")
+        names_dir = Path.joinpath(ROOT, "Datasets/lfw-deepfunneled/") # "faces/lfw-deepfunneled/")
     if directory == "celeb":
-        names_dir = Path.joinpath(ROOT, "celeb_faces/test/")
+        names_dir = Path.joinpath(ROOT, "Datasets/Celebrity/test/")
 
     names = [x.name for x in names_dir.iterdir()]
     return names
@@ -179,15 +179,29 @@ def test_accuracy(face_recognizer, faces_test, labels_test, directory):
     print(f"Accuracy: {correct / total}, correct guesses: {correct}, total: {total}")
 
 
-def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory):
+def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory, eigen = False, fisher = False):
     statements = []
     thresholds = []
     false_accept_values = []
     false_reject_values = []
     true_accept_values = []
     true_reject_values = []
+    true_positive_rates = []
+    false_positive_rates = []
     accuracies = []
-    for threshold in range(1, 201, 10):
+
+    # setting threshold and steps for accuracy test
+    maxThreshold = 200
+    step = 2
+
+    if (eigen):
+        maxThreshold = 5500
+        step = 55
+    if (fisher):
+        maxThreshold = 6000
+        step = 60
+
+    for threshold in range(1, maxThreshold, step):
         true_accept = 0
         false_accept = 0
         true_reject = 0
@@ -197,6 +211,7 @@ def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory
         correct = 0
         for index, face in enumerate(faces_test):
             guess, distance = predict(face_recognizer, face)
+            print(distance)
             if names[labels_test[index] - 1] != "ZZZ":
                 # Here we can have true accept or false reject
                 if distance > threshold:
@@ -216,9 +231,15 @@ def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory
         false_reject_values += [false_reject]
         false_accept_values += [false_accept]
         accuracies += [(true_accept + true_reject) / total]
+        tpr = true_accept/(true_accept + false_reject)
+        fpr = false_accept/(false_accept + true_reject)
+        true_positive_rates += [tpr]
+        false_positive_rates += [fpr]
     for statement in statements:
         print(statement)
 
     #TODO: fai tutti i plot più o meno allo stesso modo
-    plt.plot(thresholds, accuracies)
+    #plt.plot(thresholds, accuracies)
+    plt.plot(false_positive_rates, true_positive_rates)
     plt.show()
+
