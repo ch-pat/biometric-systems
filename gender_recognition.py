@@ -119,7 +119,7 @@ def gender_plot_auroc():
         for directory in os.listdir("gender/Validation"):
             for image in os.listdir("gender/Validation/" + directory):
                 res, img = checking("gender/Validation/" + directory + "/" + image)
-                if res is not None and img is not None:
+                if res and img:
                     result = res[0][0]
                     if result >= i / 10:
                         if 0 == reverse_label[directory]:
@@ -131,7 +131,7 @@ def gender_plot_auroc():
                             fn += 1
                         else:
                             tn += 1
-        print(f"Accuracy at threshold {i / 10}: {(tp + tn) / (tp + tn + fp + fn)}")
+            print(f"Accuracy at threshold {i / 10}: {(tp + tn) / (tp + tn + fp + fn)}")
         tpr = tp/(tp + fn)
         fpr = fp/(fp + tn)
         true_positive_rates += [tpr]
@@ -142,7 +142,7 @@ def gender_plot_auroc():
         false_positive_values += [fp]
         false_negative_values += [fn]
         accuracies += [(tp + tn) / (tp + tn + fp + fn)]
-        print(f"TP {tp}, TN: {tn}, FP {fp}, FN: {fn}")
 
+    print(f"TP {tp}, TN: {tn}, FP {fp}, FN: {fn}")
     plt.plot(false_positive_rates, true_positive_rates)
     plt.show()
