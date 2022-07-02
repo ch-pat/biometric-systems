@@ -179,7 +179,7 @@ def test_accuracy(face_recognizer, faces_test, labels_test, directory):
     print(f"Accuracy: {correct / total}, correct guesses: {correct}, total: {total}")
 
 
-def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory, eigen=False, fisher=False):
+def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory, eigen = False, fisher = False):
     statements = []
     thresholds = []
     false_accept_values = []
@@ -188,17 +188,18 @@ def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory
     true_reject_values = []
     true_positive_rates = []
     false_positive_rates = []
+    false_rejection_rates = []
     accuracies = []
 
     # setting threshold and steps for accuracy test
-    max_threshold = 200
-    step = 2
+    maxThreshold = 200
+    step = 1
 
-    if eigen:
-        max_threshold = 5500
+    if (eigen):
+        maxThreshold = 5500
         step = 55
-    if fisher:
-        max_threshold = 6000
+    if (fisher):
+        maxThreshold = 6000
         step = 60
 
     guesses = []
@@ -207,17 +208,18 @@ def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory
     for index, face in enumerate(faces_test):
         guess, distance = predict(face_recognizer, face)
         guesses += [guess]
-        distances += [distance]
+        distances += [distance] 
 
-    for threshold in range(1, max_threshold, step):
+    for threshold in range(1, maxThreshold, step):
         true_accept = 0
         false_accept = 0
         true_reject = 0
         false_reject = 0
         total = len(faces_test)
         names = get_names(directory)
+        correct = 0
         for index, face in enumerate(faces_test):
-            guesses = guesses[index]
+            guess = guesses[index]
             distance = distances[index]
             if names[labels_test[index] - 1] != "ZZZ":
                 # Here we can have true accept or false reject
@@ -239,14 +241,19 @@ def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory
         false_accept_values += [false_accept]
         accuracies += [(true_accept + true_reject) / total]
         tpr = true_accept/(true_accept + false_reject)
+        frr = false_reject/(true_accept + false_reject)
         fpr = false_accept/(false_accept + true_reject)
         true_positive_rates += [tpr]
         false_positive_rates += [fpr]
+        false_rejection_rates += [frr]
+        print("Threshold is " + str(threshold) + ", " + "fpr is: " + str(fpr) + ", " + "frr is: " + str(frr))
     for statement in statements:
         print(statement)
 
     #TODO: fai tutti i plot più o meno allo stesso modo
     #plt.plot(thresholds, accuracies)
     plt.plot(false_positive_rates, true_positive_rates)
+    #plt.plot(thresholds, false_positive_rates, "r")
+    #plt.plot(thresholds, false_rejection_rates, "g")
     plt.show()
 
