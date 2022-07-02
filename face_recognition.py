@@ -179,7 +179,7 @@ def test_accuracy(face_recognizer, faces_test, labels_test, directory):
     print(f"Accuracy: {correct / total}, correct guesses: {correct}, total: {total}")
 
 
-def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory, eigen = False, fisher = False):
+def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory, eigen=False, fisher=False):
     statements = []
     thresholds = []
     false_accept_values = []
@@ -191,27 +191,34 @@ def test_accuracy_thresholds(face_recognizer, faces_test, labels_test, directory
     accuracies = []
 
     # setting threshold and steps for accuracy test
-    maxThreshold = 200
+    max_threshold = 200
     step = 2
 
-    if (eigen):
-        maxThreshold = 5500
+    if eigen:
+        max_threshold = 5500
         step = 55
-    if (fisher):
-        maxThreshold = 6000
+    if fisher:
+        max_threshold = 6000
         step = 60
 
-    for threshold in range(1, maxThreshold, step):
+    guesses = []
+    distances = []
+
+    for index, face in enumerate(faces_test):
+        guess, distance = predict(face_recognizer, face)
+        guesses += [guess]
+        distances += [distance]
+
+    for threshold in range(1, max_threshold, step):
         true_accept = 0
         false_accept = 0
         true_reject = 0
         false_reject = 0
         total = len(faces_test)
         names = get_names(directory)
-        correct = 0
         for index, face in enumerate(faces_test):
-            guess, distance = predict(face_recognizer, face)
-            print(distance)
+            guesses = guesses[index]
+            distance = distances[index]
             if names[labels_test[index] - 1] != "ZZZ":
                 # Here we can have true accept or false reject
                 if distance > threshold:
